@@ -1,7 +1,8 @@
 #lang racket
 
+(struct program-state ())
 (struct parse-result (parsed remaining) #:inspector #f)
-(struct variable-assignment-data (identifier expression) #:inspector #f)
+(struct variable-assignment (identifier expression) #:inspector #f)
 
 (define (consume-whitespace str)
   (match str
@@ -87,7 +88,11 @@
 
 (define parse-variable-assignment
   (chain (list parse-identifier (leading-whitespace parse-equals) (leading-whitespace parse-expression))
-    (lambda (identifier equals expression) (variable-assignment-data (string-join identifier "") expression))))
+    (lambda (identifier equals expression) (variable-assignment (string-join identifier "") expression))))
+
+(define empty-state (program-state))
+(define (evaluation-step state program) state)
+(define (evaluate-program stream) (foldl evaluation-step empty-state stream))
 
 (define top-level-statement (leading-whitespace (any-of parse-variable-assignment)))
 (define parse-program (many1 top-level-statement))
