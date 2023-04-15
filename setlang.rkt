@@ -1,11 +1,14 @@
 #lang racket
 
+(provide (all-defined-out))
+
 (struct program-state () #:inspector #f)
 (struct symbol (identifier) #:inspector #f)
 (struct identifier (name) #:inspector #f)
 (struct function-definition (identifier parameters expression) #:inspector #f)
 (struct parse-result (parsed remaining) #:inspector #f)
 (struct variable-assignment (identifier expression) #:inspector #f)
+(struct binary-operation (left operator right) #:inspector #f)
 
 (define (consume-whitespace str)
   (match str
@@ -94,7 +97,17 @@
       (chain (list (parse-string "(") parse-expression (parse-string ")"))
         (lambda (lb expression rb) expression)))
     (parser str)))
-(define parse-expression (any-of bracketed-expression parse-identifier parse-symbol parse-set))
+
+(define (parse-any-string . strings) (apply any-of (map parse-string strings)))
+(define parse-binary-operator-symbol (parse-any-string "\\" "union"))
+(define parse-binary-operator
+  (lambda (str)
+    (define parser
+      (chain
+        (list (parse-string-leading-whitespace "(") parse-expression (leading-whitespace parse-binary-operator-symbol) parse-expression (parse-string-leading-whitespace ")"))
+        (lambda (lb left operator right rb) binary-operation left operator right)))
+    (parser str)))
+(define parse-expression (any-of bracketed-expression parse-binary-operator parse-identifier parse-symbol parse-set))
 
 (define parse-variable-assignment
   (chain (list parse-identifier (leading-whitespace parse-equals) (leading-whitespace parse-expression))
