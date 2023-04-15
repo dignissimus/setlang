@@ -88,7 +88,13 @@
 (define parse-set
   (chain (list (parse-string-leading-whitespace "{") parse-set-body (parse-string-leading-whitespace "}"))
       (lambda (lb set-body rb) set-body)))
-(define parse-expression (any-of parse-identifier parse-symbol parse-set))
+(define bracketed-expression
+  (lambda (str)
+    (define parser
+      (chain (list (parse-string "(") parse-expression (parse-string ")"))
+        (lambda (lb expression rb) expression)))
+    (parser str)))
+(define parse-expression (any-of bracketed-expression parse-identifier parse-symbol parse-set))
 
 (define parse-variable-assignment
   (chain (list parse-identifier (leading-whitespace parse-equals) (leading-whitespace parse-expression))
