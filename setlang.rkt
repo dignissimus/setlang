@@ -8,6 +8,7 @@
 (struct function-definition (identifier parameters expression) #:inspector #f)
 (struct parse-result (parsed remaining) #:inspector #f)
 (struct variable-assignment (identifier expression) #:inspector #f)
+(struct unary-operation (operator expression) #:inspector #f)
 (struct binary-operation (left operator right) #:inspector #f)
 
 (define (consume-whitespace str)
@@ -99,7 +100,12 @@
     (parser str)))
 
 (define (parse-any-string . strings) (apply any-of (map parse-string strings)))
+(define parse-unary-operator-symbol (parse-any-string "supremum"))
 (define parse-binary-operator-symbol (parse-any-string "\\" "union"))
+(define parse-unary-operator
+  (lambda (str)
+    (define parser (chain (list parse-unary-operator-symbol parse-expression) unary-operation))
+    (parser str)))
 (define parse-binary-operator
   (lambda (str)
     (define parser
@@ -107,7 +113,7 @@
         (list (parse-string-leading-whitespace "(") parse-expression (leading-whitespace parse-binary-operator-symbol) parse-expression (parse-string-leading-whitespace ")"))
         (lambda (lb left operator right rb) binary-operation left operator right)))
     (parser str)))
-(define parse-expression (any-of bracketed-expression parse-binary-operator parse-identifier parse-symbol parse-set))
+(define parse-expression (any-of bracketed-expression parse-binary-operator parse-unary-operator parse-identifier parse-symbol parse-set))
 
 (define parse-variable-assignment
   (chain (list parse-identifier (leading-whitespace parse-equals) (leading-whitespace parse-expression))
