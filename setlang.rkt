@@ -1,6 +1,9 @@
 #lang racket
 
-(struct program-state ())
+(struct program-state () #:inspector #f)
+(struct symbol (identifier) #:inspector #f)
+(struct identifier (name) #:inspector #f)
+(struct function-definition (identifier parameters expression) #:inspector #f)
 (struct parse-result (parsed remaining) #:inspector #f)
 (struct variable-assignment (identifier expression) #:inspector #f)
 
@@ -78,11 +81,12 @@
   (lambda (str)
     (define str_ (consume-whitespace str))
     (parser str_)))
+(define parse-string-leading-whitespace (compose leading-whitespace parse-string))
 (define (parse-set-body str) 
   (define parser_ (many (leading-whitespace parse-expression)))
   (parser_ str))
 (define parse-set
-  (chain (list (parse-string "{") parse-set-body (parse-string "}"))
+  (chain (list (parse-string-leading-whitespace "{") parse-set-body (parse-string-leading-whitespace "}"))
       (lambda (lb set-body rb) set-body)))
 (define parse-expression (any-of parse-identifier parse-symbol parse-set))
 
@@ -90,9 +94,17 @@
   (chain (list parse-identifier (leading-whitespace parse-equals) (leading-whitespace parse-expression))
     (lambda (identifier equals expression) (variable-assignment (string-join identifier "") expression))))
 
+(define parse-function-definition
+  (chain
+    (list
+      (parse-string "def ") parse-identifier
+      (parse-string-leading-whitespace "(") (many (leading-whitespace parse-identifier)) (parse-string-leading-whitespace ")")
+      (parse-string-leading-whitespace "=") (leading-whitespace parse-expression))
+    (lambda (def name lb parameters rb eq expression) (function-definition name parameters expression))))
+
 (define empty-state (program-state))
 (define (evaluation-step state program) state)
 (define (evaluate-program stream) (foldl evaluation-step empty-state stream))
 
-(define top-level-statement (leading-whitespace (any-of parse-variable-assignment)))
-(define parse-program (many1 top-level-statement))
+(define top-level-statement (leading-whitespace (any-of parse-variable-assignment parse-function-definition)))
+(define parse-program (many top-level-statement))
